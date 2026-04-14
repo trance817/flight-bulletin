@@ -288,14 +288,10 @@
     }
 
     function buildMonthButtons(rows) {
-      const months = [...new Set(rows.map(r => {
-        const d = parseDate(r['a']);
-        return d ? String(d.getMonth() + 1) : null;
-      }).filter(Boolean))].sort((a, b) => parseInt(a) - parseInt(b));
       const fm = document.getElementById('fm');
       filterState.month = 'all';
       fm.innerHTML = `<button class="fbtn active" data-val="all">全部</button>` +
-        months.map(m => `<button class="fbtn" data-val="${m}">${m}月</button>`).join('');
+        ['5','6','7','8','9','10'].map(m => `<button class="fbtn" data-val="${m}">${m}月</button>`).join('');
       bindFilterGroup('fm', 'month');
     }
 
