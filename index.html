@@ -79,12 +79,12 @@
     .date-block .val { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: #f1f5f9; }
     .date-block .wkd { font-size: 11px; color: #60a5fa; margin-top: 2px; }
     .arrow-block { display: flex; flex-direction: column; align-items: center; color: #374151; font-size: 11px; gap: 1px; flex-shrink: 0; }
-    .dur-badge { font-size: 10px; background: #1e3a5f; color: #60a5fa; padding: 1px 6px; border-radius: 4px; font-weight: 600; }
+    .dur-badge { font-size: 15px; background: #1e3a5f; color: #60a5fa; padding: 3px 10px; border-radius: 6px; font-weight: 700; }
 
     /* remain */
     .remain-block { margin-left: auto; text-align: right; flex-shrink: 0; }
     .remain-block .lbl { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-    .remain-num { font-size: 32px; font-weight: 700; line-height: 1; }
+    .remain-num { font-size: 48px; font-weight: 700; line-height: 1; }
     .remain-num.r0   { color: #4b5563; }
     .remain-num.rlow { color: #ef4444; animation: blink 1.2s ease-in-out infinite; }
     .remain-num.rmid { color: #f59e0b; }
@@ -141,7 +141,6 @@
       <div id="fs">
         <button class="fbtn active" data-val="all">全部</button>
         <button class="fbtn" data-val="available">🟢 尚有空位</button>
-        <button class="fbtn" data-val="sold">🔴 已售完</button>
         <button class="fbtn" data-val="group">🎫 可湊團票</button>
       </div>
     </div>
@@ -151,14 +150,7 @@
     </div>
     <div class="filter-row">
       <span class="filter-label">月份</span>
-      <div id="fm">
-        <button class="fbtn active" data-val="all">全部</button>
-        <button class="fbtn" data-val="6">6月</button>
-        <button class="fbtn" data-val="7">7月</button>
-        <button class="fbtn" data-val="8">8月</button>
-        <button class="fbtn" data-val="9">9月</button>
-        <button class="fbtn" data-val="10">10月</button>
-      </div>
+      <div id="fm"></div>
     </div>
   </div>
 
@@ -295,9 +287,24 @@
       return explicit || duration(r['a'], r['b']);
     }
 
+    function buildMonthButtons(rows) {
+      const availRows = rows.filter(r => getStatus(r['c'], r['d'], r['g']) !== 'none');
+      const months = [...new Set(availRows.map(r => {
+        const d = parseDate(r['a']);
+        return d ? String(d.getMonth() + 1) : null;
+      }).filter(Boolean))].sort((a, b) => parseInt(a) - parseInt(b));
+      const fm = document.getElementById('fm');
+      filterState.month = 'all';
+      fm.innerHTML = `<button class="fbtn active" data-val="all">全部</button>` +
+        months.map(m => `<button class="fbtn" data-val="${m}">${m}月</button>`).join('');
+      bindFilterGroup('fm', 'month');
+    }
+
     function buildDurButtons(rows) {
-      const dataDurs = [...new Set(rows.map(r => rowDur(r)).filter(Boolean))];
-      const durs = [...new Set(['4D', ...dataDurs])].sort((a, b) => parseInt(a) - parseInt(b));
+      // 只從有空位的航班建立天數按鈕
+      const availRows = rows.filter(r => getStatus(r['c'], r['d'], r['g']) !== 'none');
+      const dataDurs = [...new Set(availRows.map(r => rowDur(r)).filter(Boolean))];
+      const durs = [...new Set([...dataDurs])].sort((a, b) => parseInt(a) - parseInt(b));
       const fd = document.getElementById('fd');
       filterState.dur = 'all';
       fd.innerHTML = `<button class="fbtn active" data-val="all">全部</button>` +
@@ -319,7 +326,6 @@
         const s = card.dataset.status, m = card.dataset.month, d = card.dataset.dur, grp = card.dataset.group === '1';
         let show = true;
         if (sf === 'available' && s === 'none') show = false;
-        else if (sf === 'sold' && s !== 'none') show = false;
         else if (sf === 'group' && !grp) show = false;
         if (mf !== 'all' && m !== mf) show = false;
         if (df !== 'all' && d !== df) show = false;
@@ -328,7 +334,6 @@
     }
 
     bindFilterGroup('fs', 'status');
-    bindFilterGroup('fm', 'month');
 
     let _dest = 'BKK';
     function renderCard(r) {
@@ -339,7 +344,8 @@
       const booked = parseInt(e, 10);
       const dep = r['a'], ret = r['b'];
 
-      const pillLabel = { none:'無機位空間', over:'超放', ok:'有位' }[status];
+      if (status === 'none') return '';   // 已售完不顯示卡片
+      const pillLabel = { over:'超放', ok:'有位' }[status];
       const dur = rowDur(r);
       const remainVal = isNaN(remain) ? '—' : remain;
       const depDate = parseDate(dep);
@@ -430,7 +436,9 @@
         _dest = dest;
         resetFilters();
         buildDurButtons(rows);
-        grid.innerHTML = rows.length ? rows.map(renderCard).join('') : renderState('empty');
+        buildMonthButtons(rows);
+        const html = rows.map(renderCard).join('');
+        grid.innerHTML = html || renderState('empty');
         document.getElementById('last-updated').textContent = `更新於 ${new Date().toLocaleTimeString('zh-TW')}`;
       } catch {
         grid.innerHTML = renderState('error');
