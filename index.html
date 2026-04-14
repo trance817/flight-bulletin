@@ -288,8 +288,7 @@
     }
 
     function buildMonthButtons(rows) {
-      const availRows = rows.filter(r => getStatus(r['c'], r['d'], r['g']) !== 'none');
-      const months = [...new Set(availRows.map(r => {
+      const months = [...new Set(rows.map(r => {
         const d = parseDate(r['a']);
         return d ? String(d.getMonth() + 1) : null;
       }).filter(Boolean))].sort((a, b) => parseInt(a) - parseInt(b));
